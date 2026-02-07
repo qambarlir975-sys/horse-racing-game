@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>МОИ 3D ГОНКИ ЛОШАДЕЙ</title>
+    <style>
+        /* ВСЕ СТИЛИ В ОДНОМ ФАЙЛЕ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #1E90FF 100%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* ИНТЕРФЕЙС */
+        .ui-top {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid #FFD700;
+        }
+        
+        .money {
+            color: #FFD700;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .energy {
+            color: #00FF00;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+        }
+        
+        .btn {
+            padding: 20px 25px;
+            font-size: 18px;
+            background: linear-gradient(45deg, #FF416C, #FF4B2B);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            min-width: 120px;
+            box-shadow: 0 5px 0 #CC0000;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0px 0 #CC0000;
+        }
+        
+        .btn-boost {
+            background: linear-gradient(45deg, #00b09b, #96c93d);
+            box-shadow: 0 5px 0 #008000;
+        }
+        
+        .btn-shop {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            box-shadow: 0 5px 0 #1B4F72;
+        }
+        
+        .shop-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 20px;
+            border: 3px solid #FFD700;
+            display: none;
+            width: 90%;
+            max-width: 400px;
+            z-index: 100;
+        }
+        
+        .shop-items {
+            display: grid;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .shop-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+        }
+        
+        .shop-title {
+            color: #FFD700;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #FF416C;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+        
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 255, 0, 0.9);
+            color: #000;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        /* МЕНЮ */
+        .menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            border: 4px solid #FFD700;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .menu-title {
+            color: #FFD700;
+            font-size: 32px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+        
+        .menu-btn {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 15px;
+            font-size: 18px;
+        }
+        
+        @media (max-width: 768px) {
+            .btn {
+                padding: 15px 20px;
+                font-size: 16px;
+                min-width: 100px;
+            }
+            
+            .controls {
+                gap: 10px;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- КАНВАС ДЛЯ 3D -->
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- ИНТЕРФЕЙС -->
+    <div class="ui-top">
+        <div class="money">🪙 <span id="moneyDisplay">1000</span></div>
+        <div class="energy">⚡ <span id="energyDisplay">100</span>/100</div>
+        <div id="speedDisplay">🏇 x<span id="speedValue">1.0</span></div>
+    </div>
+    
+    <!-- УПРАВЛЕНИЕ -->
+    <div class="controls">
+        <button class="btn" onclick="moveHorse(-1)">← ЛЕВО</button>
+        <button class="btn btn-boost" onclick="useBoost()" id="boostBtn">⚡ УСКОРЕНИЕ</button>
+        <button class="btn" onclick="moveHorse(1)">ПРАВО →</button>
+    </div>
+    
+    <button class="btn btn-shop" onclick="openShop()" style="position: absolute; bottom: 100px; right: 20px;">🏬 МАГАЗИН</button>
+    
+    <!-- МАГАЗИН -->
+    <div class="shop-panel" id="shopPanel">
+        <button class="close-btn" onclick="closeShop()">✕</button>
+        <h2 class="shop-title">🏬 МАГАЗИН</h2>
+        <div class="shop-items">
+            <div class="shop-item">
+                <h3>🐎 НОВАЯ ЛОШАДЬ</h3>
+                <p>Скорость: +0.5</p>
+                <p>Цена: 500 🪙</p>
+                <button class="btn" onclick="buyItem('horse')">КУПИТЬ</button>
+            </div>
+            <div class="shop-item">
+                <h3>⚡ БОЛЬШЕ ЭНЕРГИИ</h3>
+                <p>+50 макс. энергии</p>
+                <p>Цена: 300 🪙</p>
+                <button class="btn" onclick="buyItem('energy')">КУПИТЬ</button>
+            </div>
+            <div class="shop-item">
+                <h3>🍎 ЭНЕРГЕТИК</h3>
+                <p>Восстановить 30 энергии</p>
+                <p>Цена: 100 🪙</p>
+                <button class="btn" onclick="buyItem('apple')">КУПИТЬ</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- УВЕДОМЛЕНИЯ -->
+    <div class="notification" id="notification"></div>
+    
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div class="menu" id="mainMenu">
+        <h1 class="menu-title">🏇 3D ГОНКИ ЛОШАДЕЙ</h1>
+        <button class="btn menu-btn" onclick="startGame()">▶ НАЧАТЬ ИГРУ</button>
+        <button class="btn menu-btn btn-shop" onclick="openShop()">🏬 МАГАЗИН</button>
+        <button class="btn menu-btn" onclick="showInstructions()">❓ КАК ИГРАТЬ</button>
+    </div>
+
+    <script>
+        // === ИГРОВЫЕ ПЕРЕМЕННЫЕ ===
+        let money = 1000;
+        let energy = 100;
+        let maxEnergy = 100;
+        let speed = 1.0;
+        let gameStarted = false;
+        let horsePosition = 0;
+        let trackPosition = 0;
+        let opponents = [];
+        let coins = [];
+        let lastTime = 0;
+        
+        // === КАНВАС И 3D РЕНДЕРИНГ ===
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // === 3D МОДЕЛИ (псевдо-3D) ===
+        function draw3DHorse(x, y, color, scale = 1, isPlayer = false) {
+            // Тело лошади
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.ellipse(x, y, 40 * scale, 20 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Голова
+            ctx.beginPath();
+            ctx.ellipse(x + 45 * scale, y - 10 * scale, 15 * scale, 12 * scale, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ноги
+            const legY = y + 15 * scale;
+            ctx.fillRect(x - 25 * scale, legY, 10 * scale, 25 * scale);
+            ctx.fillRect(x - 5 * scale, legY, 10 * scale, 25 * scale);
+            ctx.fillRect(x + 15 * scale, legY, 10 * scale, 25 * scale);
+            ctx.fillRect(x + 35 * scale, legY, 10 * scale, 25 * scale);
+            
+            // Жокей
+            ctx.fillStyle = isPlayer ? '#FF416C' : '#3498db';
+            ctx.beginPath();
+            ctx.arc(x, y - 20 * scale, 12 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Имя
+            ctx.fillStyle = 'white';
+            ctx.font = `${12 * scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillText(isPlayer ? 'ВЫ' : 'СОПЕРНИК', x, y - 40 * scale);
+        }
+        
+        function draw3DTrack() {
+            // Небо
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#1E90FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Дорога (3D перспектива)
+            ctx.fillStyle = '#8B4513';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(canvas.width / 4, canvas.height * 0.6);
+            ctx.lineTo(canvas.width * 3/4, canvas.height * 0.6);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Разметка
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 20]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, canvas.height * 0.6);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Облака
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for(let i = 0; i < 3; i++) {
+                const x = (Date.now() * 0.01 + i * 200) % (canvas.width + 200) - 100;
+                const y = 100 + i * 50;
+                ctx.beginPath();
+                ctx.arc(x, y, 30, 0, Math.PI * 2);
+                ctx.arc(x + 40, y, 40, 0, Math.PI * 2);
+                ctx.arc(x + 80, y, 30, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        function draw3DCoin(x, y) {
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFA500';
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('$', x, y + 4);
+        }
+        
+        // === ИГРОВАЯ ЛОГИКА ===
+        function startGame() {
+            document.getElementById('mainMenu').style.display = 'none';
+            gameStarted = true;
+            
+            // Создаем противников
+            opponents = [];
+            for(let i = 0; i < 3; i++) {
+                opponents.push({
+                    x: canvas.width / 2,
+                    y: canvas.height * 0.7 + i * 80,
+                    speed: 1 + Math.random() * 0.5,
+                    color: `hsl(${i * 120}, 70%, 50%)`
+                });
+            }
+            
+            // Создаем монеты
+            coins = [];
+            for(let i = 0; i < 10; i++) {
+                coins.push({
+                    x: Math.random() * canvas.width,
+                    y: canvas.height * 0.7 + Math.random() * 200,
+                    collected: false
+                });
+            }
+            
+            // Запускаем игровой цикл
+            gameLoop();
+        }
+        
+        function moveHorse(direction) {
+            if (!gameStarted) return;
+            horsePosition += direction * 5;
+            horsePosition = Math.max(-100, Math.min(100, horsePosition));
+        }
+        
+        function useBoost() {
+            if (!gameStarted || energy < 20) return;
+            
+            energy -= 20;
+            speed += 0.3;
+            updateUI();
+            
+            setTimeout(() => {
+                speed -= 0.3;
+            }, 1000);
+            
+            showNotification('⚡ УСКОРЕНИЕ АКТИВИРОВАНО!');
+        }
+        
+        function buyItem(type) {
+            let cost = 0;
+            
+            switch(type) {
+                case 'horse':
+                    cost = 500;
+                    if (money >= cost) {
+                        money -= cost;
+                        speed += 0.5;
+                        showNotification('🐎 НОВАЯ ЛОШАДЬ КУПЛЕНА! +0.5 к скорости');
+                    }
+                    break;
+                case 'energy':
+                    cost = 300;
+                    if (money >= cost) {
+                        money -= cost;
+                        maxEnergy += 50;
+                        showNotification('⚡ +50 к максимальной энергии');
+                    }
+                    break;
+                case 'apple':
+                    cost = 100;
+                    if (money >= cost) {
+                        money -= cost;
+                        energy = Math.min(energy + 30, maxEnergy);
+                        showNotification('🍎 Энергия восстановлена');
+                    }
+                    break;
+            }
+            
+            if (money < cost) {
+                showNotification('❌ НЕДОСТАТОЧНО ДЕНЕГ!');
+            }
+            
+            updateUI();
+        }
+        
+        // === UI ФУНКЦИИ ===
+        function updateUI() {
+            document.getElementById('moneyDisplay').textContent = money;
+            document.getElementById('energyDisplay').textContent = energy;
+            document.getElementById('speedValue').textContent = speed.toFixed(1);
+            
+            const boostBtn = document.getElementById('boostBtn');
+            boostBtn.disabled = energy < 20;
+            boostBtn.style.opacity = energy < 20 ? '0.5' : '1';
+        }
+        
+        function showNotification(text) {
+            const notif = document.getElementById('notification');
+            notif.textContent = text;
+            notif.style.display = 'block';
+            notif.style.background = 'linear-gradient(45deg, #00b09b, #96c93d)';
+            
+            setTimeout(() => {
+                notif.style.display = 'none';
+            }, 2000);
+        }
+        
+        function openShop() {
+            document.getElementById('shopPanel').style.display = 'block';
+        }
+        
+        function closeShop() {
+            document.getElementById('shopPanel').style.display = 'none';
+        }
+        
+        function showInstructions() {
+            showNotification('←→ ДВИГАТЬСЯ | ⚡ УСКОРЕНИЕ | 🏬 МАГАЗИН');
+        }
+        
+        // === ИГРОВОЙ ЦИКЛ ===
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = (timestamp - lastTime) / 16;
+            lastTime = timestamp;
+            
+            if (!gameStarted) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            // Очистка
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем 3D мир
+            draw3DTrack();
+            
+            // Обновляем и рисуем монеты
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    draw3DCoin(coin.x, coin.y);
+                    
+                    // Проверка сбора
+                    const dx = coin.x - (canvas.width / 2 + horsePosition);
+                    const dy = coin.y - (canvas.height * 0.7);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 30) {
+                        coin.collected = true;
+                        money += 50;
+                        energy = Math.min(energy + 5, maxEnergy);
+                        showNotification('🪙 +50 монет!');
+                        updateUI();
+                    }
+                }
+            });
+            
+            // Обновляем противников
+            opponents.forEach((opp, index) => {
+                opp.y -= opp.speed * speed;
+                if (opp.y < canvas.height * 0.3) {
+                    opp.y = canvas.height * 0.7 + 200;
+                    opp.x = canvas.width / 2 + (Math.random() - 0.5) * 100;
+                }
+                
+                draw3DHorse(opp.x, opp.y, opp.color, 0.8);
+            });
+            
+            // Рисуем игрока
+            const playerX = canvas.width / 2 + horsePosition;
+            const playerY = canvas.height * 0.7;
+            draw3DHorse(playerX, playerY, '#8B4513', 1, true);
+            
+            // Восстановление энергии
+            if (energy < maxEnergy) {
+                energy += 0.1;
+                updateUI();
+            }
+            
+            // Автодвижение вперед
+            trackPosition += speed * 2;
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // === ИНИЦИАЛИЗАЦИЯ ===
+        updateUI();
+        document.getElementById('mainMenu').style.display = 'block';
+        
+        // Запускаем игровой цикл
+        requestAnimationFrame(gameLoop);
+        
+        // Управление наклоном телефона
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', (e) => {
+                if (!gameStarted) return;
+                const tilt = e.gamma; // -90 to 90 degrees
+                if (tilt) {
+                    horsePosition = (tilt / 90) * 50;
+                    horsePosition = Math.max(-100, Math.min(100, horsePosition));
+                }
+            });
+        }
+        
+        // Управление касаниями
+        canvas.addEventListener('touchstart', (e) => {
+            if (!gameStarted) return;
+            const touchX = e.touches[0].clientX;
+            const halfWidth = canvas.width / 2;
+            
+            if (touchX < halfWidth) {
+                moveHorse(-1);
+            } else {
+                moveHorse(1);
+            }
+        });
+    </script>
+</body>
+  </html>
